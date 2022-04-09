@@ -82,7 +82,6 @@ trap cleanup EXIT
 echo -en "\a" >/dev/tty5
 
 # Capture main output, to send log via email
-# TODO: capture stderr too
 OUTPUT=$(main)
 echo "${OUTPUT}"
 
