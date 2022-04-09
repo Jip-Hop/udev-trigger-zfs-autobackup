@@ -28,3 +28,7 @@ Available options:
 ```
 
 To temporarily disable executing automatic backups, set `ENABLED=false` in the [config](./config) file.
+
+When rotating two backup disks for offsite storage, the TrueNAS SCALE webinterface may look like this (when both drives are disconnected):
+
+<img width="923" alt="Screenshot 2022-04-09 at 19 20 31" src="https://user-images.githubusercontent.com/2871973/162584798-9321d1ab-6b35-4c7e-bd6a-214f3f56c7e8.png">
