@@ -4,10 +4,16 @@
 
 set -euo pipefail
 
+# Set default config values here, so variables are always defined
+# Overridden by sourcing the config file
+ENABLED=false
+EMAIL=''
+BACKUP_POOL[0]=''
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 . "${SCRIPT_DIR}/config"
 
-if ! [ "$ENABLED" = true ]; then
+if ! [ "${ENABLED}" = true ]; then
     echo "Skip, auto backup is disabled."
     exit
 fi
@@ -21,23 +27,27 @@ fi
 
 cleanup() {
 
-    if mountpoint -q "/mnt/${POOL}"; then
-        MESSAGE="Pool ${POOL} is still mounted at '/mnt/${POOL}'. Not safe for removal!"
-    else
-        MESSAGE="Pool ${POOL} is NOT mounted at '/mnt/${POOL}'. Should be safe to remove."
-    fi
+    # Only email if the EMAIL variable is not empty
+    if ! [ -z "${EMAIL}" ]; then
 
-    # Deactivate Python virtual environment for next commands
-    (
-        deactivate
-        # Send email to root user (need to have configured the email address for root user in TrueNAS web interface)
-        printf "%s\n\nFull log output:\n\n%s" "${MESSAGE}" "${OUTPUT}" | mail -s "${SUBJECT}" "root"
-    )
+        if zpool list ${POOL} 2>/dev/null; then
+            MESSAGE="Pool ${POOL} is present. Not safe for removal!"
+        else
+            MESSAGE="Pool ${POOL} is NOT present. Should be safe to remove."
+        fi
+
+        # Deactivate Python virtual environment for next commands
+        (
+            deactivate
+            # Send email to root user (need to have configured the email address for root user in TrueNAS web interface)
+            printf "%s\n\nFull log output:\n\n%s" "${MESSAGE}" "${OUTPUT}" | mail -s "${SUBJECT}" "${EMAIL}"
+        )
+    fi
 }
 
 main() {
     set -euo pipefail
-    # Duplicates stderr onto stdout 
+    # Duplicates stderr onto stdout
     exec 2>&1
 
     echo "START backup of datasets with zfs property 'autobackup:${POOL}' to pool ${POOL}"
@@ -50,18 +60,28 @@ main() {
     # TrueNAS won't automatically unlock the pool once the disk is imported, do so manually
     # TrueNAS will use the key stored in it's database (no need to manually provide this)
     echo "UNLOCK pool ${POOL}"
+
+    # TODO: optionally use a generic unlock method, reading passphrase from the config file
+    # That way this script could be used on non-TrueNAS systems too
     cli -c "storage dataset unlock id=${POOL}"
 
-    # Rollback to latest existing snapshot on this dataset (discard all changes made to a file system since latest snapshot)
-    # Speed up by using --allow-empty --no-progress
     # Backup to encrypted pool (should have been manually created before!)
-    echo "BACKUP to pool ${POOL}"
-    zfs-autobackup -v ${POOL} ${POOL} --encrypt --allow-empty --no-progress --rollback
-
-    # TODO: Should I use --no-holds to prevent this error:
+    #
+    # Speed up by using --allow-empty --no-progress --no-holds
+    #
+    # It's safe to use --no-holds as long as the user doesn't manually delete datasets/snapshots on the backup target
+    # It also helps to prevent the following error:
     # ! [Source] STDERR > cannot hold snapshot 'data@offsite1-20220409123946': tag already exists on this dataset
+    #
+    # Use --rollback to make backup target consistent with the last snapshot (undo changes made to the dataset)
+    # This won't result in extra data needing to be send
+    # Normally, rollback shouldn't have to do anything (there shouldn't be changes after the last backup)
+    # Also the pool is set to readonly to prevent accidental changes
+    # Both of these measures help prevent this error:
+    # "cannot receive incremental stream: destination has been modified since most recent snapshot"
 
-    # TODO: Should I use --rollback if dataset is also set to readonly?
+    echo "BACKUP to pool ${POOL}"
+    zfs-autobackup -v ${POOL} ${POOL} --encrypt --allow-empty --no-progress --no-holds --rollback
 
     # Mount readonly in the future, to prevent accidental changes to the backup data
     # NOTE: perhaps instead use --set-properties to make backups readonly?
