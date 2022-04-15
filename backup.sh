@@ -3,44 +3,64 @@
 # To be called by monitor.py
 
 set -euo pipefail
-
-# Set default config values here, so variables are always defined
-# Overridden by sourcing the config file
-ENABLED=false
-EMAIL=''
-BACKUP_POOL[0]=''
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-. "${SCRIPT_DIR}/config"
 
-if ! [ "${ENABLED}" = true ]; then
+# Init array
+typeset -A CONFIG
+
+# Set default values in CONFIG array
+CONFIG=(
+    [enabled]=false
+    [email]=""
+    [passphrase]=""
+)
+
+IS_BACKUP_POOL=false
+POOL=$1
+NEWLINE=$'\n'
+
+# Parse config
+# https://unix.stackexchange.com/a/206216
+while read -r line; do
+    if printf -- "%s" "$line" | grep -v '^#' | grep -F = &>/dev/null; then
+        varname=$(printf -- "%s" "$line" | cut -d '=' -f 1)
+        CONFIG[$varname]=$(printf -- "%s" "$line" | cut -d '=' -f 2-)
+        if [[ $IS_BACKUP_POOL == false && $varname == backup_pool_* && ${CONFIG[$varname]} == $POOL ]]; then
+            IS_BACKUP_POOL=true
+        fi
+    fi
+done <"${SCRIPT_DIR}/config"
+
+if ! [ "${CONFIG[enabled]}" = true ]; then
     echo "Skip, auto backup is disabled."
     exit
 fi
 
-POOL=$1
-
-if [[ ! " ${BACKUP_POOL[*]} " =~ " ${POOL} " ]]; then
+if [[ $IS_BACKUP_POOL == false ]]; then
     echo "Pool ${POOL} is not a backup pool."
     exit
 fi
 
 cleanup() {
 
-    # Only email if the EMAIL variable is not empty
-    if ! [ -z "${EMAIL}" ]; then
+    OUTPUT+="${NEWLINE}EXPORT ${POOL}"
+    zpool export ${POOL}
+    # TODO: hint about 'zpool clear ${POOL}' when zpool export fails?
 
-        if zpool list ${POOL} 2>/dev/null; then
-            MESSAGE="Pool ${POOL} is present. Not safe for removal!"
+    # Only email if the email config value is not empty
+    if ! [ -z "${CONFIG[email]}" ]; then
+
+        if zpool list ${POOL} >/dev/null 2>&1; then
+            MESSAGE="NOT safe for removal! Pool ${POOL} is still present."
         else
-            MESSAGE="Pool ${POOL} is NOT present. Should be safe to remove."
+            MESSAGE="Should be SAFE to remove disk. Pool ${POOL} is no longer present."
         fi
 
         # Deactivate Python virtual environment for next commands
         (
             deactivate
             # Send email to root user (need to have configured the email address for root user in TrueNAS web interface)
-            printf "%s\n\nFull log output:\n\n%s" "${MESSAGE}" "${OUTPUT}" | mail -s "${SUBJECT}" "${EMAIL}"
+            printf "%s\n\nFull log output:\n\n%s" "${MESSAGE}" "${OUTPUT}" | mail -s "${SUBJECT}" "${CONFIG[email]}"
         )
     fi
 }
@@ -53,17 +73,22 @@ main() {
     echo "START backup of datasets with zfs property 'autobackup:${POOL}' to pool ${POOL}"
 
     # TrueNAS won't automatically import the pool once the disk is connected, do so manually
-    echo "IMPORT pool ${POOL}"
-    zpool import ${POOL}
+    echo "IMPORT pool ${POOL} without mounting any filesystems"
+    zpool import ${POOL} -N
 
-    echo "after manual error"
-    # TrueNAS won't automatically unlock the pool once the disk is imported, do so manually
-    # TrueNAS will use the key stored in it's database (no need to manually provide this)
-    echo "UNLOCK pool ${POOL}"
+    ENCRYPT=""
 
-    # TODO: optionally use a generic unlock method, reading passphrase from the config file
-    # That way this script could be used on non-TrueNAS systems too
-    cli -c "storage dataset unlock id=${POOL}"
+    # Use passphrase from config (if it exists) to unlock pool
+    if ! [ -z "${CONFIG[passphrase]}" ]; then
+        echo "UNLOCK pool ${POOL}"
+        if ! echo "${CONFIG[passphrase]}" | zfs load-key "${POOL}"; then
+            echo "FAILED to unlock pool"
+            exit 1
+        else
+            echo "SUCCESSFULLY unlocked pool"
+            ENCRYPT=" --encrypt"
+        fi
+    fi
 
     # Backup to encrypted pool (should have been manually created before!)
     #
@@ -81,18 +106,13 @@ main() {
     # "cannot receive incremental stream: destination has been modified since most recent snapshot"
 
     echo "BACKUP to pool ${POOL}"
-    zfs-autobackup -v ${POOL} ${POOL} --encrypt --allow-empty --no-progress --no-holds --rollback
+    zfs-autobackup -v ${POOL} ${POOL} --allow-empty --no-progress --no-holds --rollback${ENCRYPT}
 
-    # Mount readonly in the future, to prevent accidental changes to the backup data
+    # Make dataset readonly, to prevent accidental changes to the backup data
     # NOTE: perhaps instead use --set-properties to make backups readonly?
     zfs set readonly=on ${POOL}
 
     # TODO: use zfs-autoverify to check backup integrity
-
-    echo "EXPORT pool ${POOL}"
-    zpool export ${POOL}
-
-    # TODO: hint about 'zpool clear ${POOL}' when zpool export fails?
 }
 
 SUBJECT="ERROR MAKING BACKUP"
@@ -103,7 +123,6 @@ echo -en "\a" >/dev/tty5
 
 # Capture main output, to send log via email
 OUTPUT=$(main)
-echo "${OUTPUT}"
 
-# TODO: actually check output of above commands to determine success
+# If we made it until here, no errors happened
 SUBJECT="SUCCESSFULLY COMPLETED BACKUP"

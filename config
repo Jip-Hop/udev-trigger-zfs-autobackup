@@ -1,14 +1,24 @@
-ENABLED=true # Set to false to temporarily disable auto backups
-EMAIL='root' # Email address or unix user to send notifications to
+# NOTE: this config file is parsed line by line
+# A config line is written as key=value
+# A comment line must START with the # character
+# You can't add a comment on the same line as a config line
+# On a config line, every character on the right side of the = will be interpreted as config value
+# So beware of trailing whitespace!
 
-# Pool names should match the autobackup zfs property, e.g. 'autobackup:offsite1'
-BACKUP_POOL[0]='offsite1'
-BACKUP_POOL[1]='offsite2'
-# BACKUP_POOL[2]='offsite3' # Uncomment this line to add additional backup pool
+# You may (temporarily) disable starting backup jobs
+# by changing enabled to false, or by adding a # in front
+enabled=true
 
-# TODO: make encryption optional
-# ENCRYPTED=true
+# Email address or local user to send notifications to
+# If you don't want to receive mail, begin the next line with a # to make it a comment
+email=root
 
-# TODO: if set (and ENCRYPTED=true) use KEYLOCATION for all backup pools
-# Otherwise use TrueNAS cli to unlock pools
-# KEYLOCATION='/path/to/zpool.key'
+# Pool names should match the autobackup zfs property, e.g. autobackup:offsite1
+# To add more backup pools, ensure the config key starts with backup_pool_
+backup_pool_0=offsite1
+#backup_pool_1=offsite2
+
+# This example passphrase demonstrates the ability to use special characters
+# You MUST change this passphrase to the passphrase you chose for your zpool!
+# If you don't want to use encryption, begin the next line with a # to make it a comment
+passphrase=~!\@#$%^&*()_+{}|:"<>?`1234567890-=hhshajd'

@@ -15,12 +15,11 @@ cd ${SCRIPT_DIR}
 
 STEPS=$(
     cat <<EOF
-1. Manually create encrypted ZFS pool(s) on removable disk.
-2. Manually edit config to specify the names of your backup pool(s).
-3. Manually run 'zpool export name_of_backup_pool' from shell and remove disk. Don't export from web interface! Encryption key will removed and auto-unlock will fail!
-4. Manually schedule ${SCRIPT_NAME} via System Settings -> Advanced -> Init/Shutdown Scripts -> Add -> Description: trigger-zfs-autobackup; Type: Script; Script: ${SCRIPT_DIR}/${SCRIPT_NAME}; When: Post Init -> Save
-5. Manually insert backup disk whenever you want to make a backup.
-6. Automatic backup is triggered and sends email on completion.
+1. Manually create (encrypted) ZFS pool(s) on removable disk(s).
+2. Manually edit config to specify the names of your backup pool(s) and the encryption passphrase.
+3. Manually schedule trigger.sh to run at system startup. On TrueNAS SCALE: System Settings -> Advanced -> Init/Shutdown Scripts -> Add -> Description: trigger-zfs-autobackup; Type: Script; Script: /path/to/trigger.sh; When: Post Init -> Save
+4. Manually insert backup disk whenever you want to make a backup.
+5. Automatic backup is triggered and sends email on completion.
 EOF
 )
 
@@ -105,4 +104,4 @@ export -f deactivate
 
 # Start monitoring udev events
 echo "Spawn monitor.py in the background..."
-python3 "${SCRIPT_DIR}/monitor.py" &
+(cd "${SCRIPT_DIR}" && python3 monitor.py &)
