@@ -6,13 +6,6 @@ SCRIPT_NAME=$(basename "${BASH_SOURCE[0]}")
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 cd ${SCRIPT_DIR}
 
-# TODO: Perhaps better to keep the pool outside the TrueNAS web interface?
-# Seems like TrueNAS SCALE will create a partition on the new pool,
-# which is used for swap as part of an mdadm array...
-# System may lock when a disk is pulled which has been setup via web interface...
-# In that case I'd have to store the encryption key/passphrase in config.
-# https://www.truenas.com/community/threads/i-wonder-why-mdadm-for-swap-instead-of-zfs.95816/
-
 STEPS=$(
     cat <<EOF
 1. Manually create (encrypted) ZFS pool(s) on removable disk(s).
