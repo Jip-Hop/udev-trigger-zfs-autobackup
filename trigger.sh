@@ -40,7 +40,7 @@ EOF
     exit
 }
 
-VENV="${SCRIPT_DIR}/.venv"
+VENV="${SCRIPT_DIR}/venv"
 
 # Default values of variables set from params
 INSTALL=false
