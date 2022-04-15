@@ -10,6 +10,8 @@
 enabled=true
 
 # Email address or local user to send notifications to
+# On TrueNAS SCALE you need to configure mail via Alerts -> Email
+# On TrueNAS SCALE, if you want to email root, you also need to specify Email for the root user via Credentials -> Local Users -> root -> Edit
 # If you don't want to receive mail, begin the next line with a # to make it a comment
 email=root
 

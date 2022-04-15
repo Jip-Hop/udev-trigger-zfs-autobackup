@@ -59,7 +59,7 @@ cleanup() {
         # Deactivate Python virtual environment for next commands
         (
             deactivate
-            # Send email to root user (need to have configured the email address for root user in TrueNAS web interface)
+            # Send email
             printf "%s\n\nFull log output:\n\n%s" "${MESSAGE}" "${OUTPUT}" | mail -s "${SUBJECT}" "${CONFIG[email]}"
         )
     fi
