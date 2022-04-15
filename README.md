@@ -95,3 +95,7 @@ Connect your backup disk to trigger the automatic backup. You'll hear a beep con
 ## Disable automatic backup
 
 To (temporarily) disable executing automatic backups, set `enabled=false` in [config](./config).
+
+## Further reading
+
+I recommend reading the [zfs-autobackup documentation](https://github.com/psy0rz/zfs_autobackup) if you want to use `udev-trigger-zfs-autobackup`.
