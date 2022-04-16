@@ -74,7 +74,7 @@ Don't forget to re-enable the backups by editing [config](./config) in case you 
 
 ### Install udev-trigger-zfs-autobackup
 
-Download this repository on the system you want to backup. Then install the dependencies by calling `trigger.sh --install` from the shell. This will install the dependencies locally using a Python virtual environment. The installation makes no modifications system outside of its installation directory. This is to ensure `udev-trigger-zfs-autobackup` will survive updates of TrueNAS SCALE (as long as you store it on one of your data pools, and not on the disks where the TrueNAS base system is installed).
+Download this repository on the system you want to backup. Then install the dependencies by calling `trigger.sh --install` from the shell. This will install the dependencies locally using a Python virtual environment. The installation makes no modifications to the system outside of its installation directory. This is to ensure `udev-trigger-zfs-autobackup` will survive updates of TrueNAS SCALE (as long as you store it on one of your data pools, and not on the disks where the TrueNAS base system is installed).
 
 ### Edit config
 
