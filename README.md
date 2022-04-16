@@ -96,8 +96,25 @@ Connect your backup disk to trigger the automatic backup. You'll hear a beep con
 
 To (temporarily) disable executing automatic backups, set `enabled=false` in [config](./config).
 
+## Snapshots / versioning
+
+A ZFS snapshot will be made before each backup. Snapshots will be kept according to the default schedule from the [zfs-autobackup Thinner](https://github.com/psy0rz/zfs_autobackup/wiki/Thinner).
+
+```
+[Source] Keep the last 10 snapshots.
+[Source] Keep every 1 day, delete after 1 week.
+[Source] Keep every 1 week, delete after 1 month.
+[Source] Keep every 1 month, delete after 1 year.
+```
+
+I recommend to create a separate cronjob on the host, to frequently take snapshots (not just when you plugin your backup disk). These snapshots will then also be transferred to the backup disk once you connect it. Your backup will contain more snapshots and you'll have more 'versions' to recover from.
+
+The command to schedule via cron could look something like this: `cd /path/to/udev-trigger-zfs-autobackup && . venv/bin/activate && zfs-autobackup offsite1`. Don't forget to change the path and replace `offsite1` with the `autobackup` ZFS property you added to your source datasets. Then schedule it to run hourly.
+
+## Recovery
+
+[Temporarily disable automatic backups](#disable-automatic-backup) then connect your backup disk. Manually import the pool (offsite1 in this example) with `zpool import offsite1 -R /mnt`. Unlock the pool with `zfs load-key offsite1` and enter the passphrase from your [config](./config) file. Mount the pool and descendant datasets with `zfs mount -a`. You can now cd into it with `cd /mnt/offsite1` and list the contents. Snapshots are found in a `.zfs` subdirectory inside each dataset. E.g. `/mnt/offsite1/.zfs/snapshot`. Note that `zfs mount -a` may have side effects. It will mount all available ZFS file systems. [There's currently no way to recursively mount a specific dataset](https://github.com/openzfs/zfs/issues/2901)...
+
 ## Further reading
 
 I recommend reading the [zfs-autobackup documentation](https://github.com/psy0rz/zfs_autobackup) if you want to use `udev-trigger-zfs-autobackup`.
-
-## TODO: document recovery process
