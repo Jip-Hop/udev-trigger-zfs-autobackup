@@ -115,7 +115,7 @@ main() {
     # TODO: use zfs-autoverify to check backup integrity
 }
 
-SUBJECT="ERROR MAKING BACKUP"
+SUBJECT="ERROR making backup"
 trap cleanup EXIT
 
 # Make beep sound
@@ -125,4 +125,4 @@ echo -en "\a" >/dev/tty5
 OUTPUT=$(main)
 
 # If we made it until here, no errors happened
-SUBJECT="SUCCESSFULLY COMPLETED BACKUP"
+SUBJECT="SUCCESSFULLY completed backup"
