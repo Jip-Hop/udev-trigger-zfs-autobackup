@@ -1,0 +1,115 @@
+import sys
+import yaml
+import re
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional
+
+# Define a data class for your configuration
+@dataclass
+class SmtpConfig:
+    server: str
+    port: int
+    login: str
+    password: str
+    recipients: List[str]
+
+# Define a data class for the logging configuration
+@dataclass
+class LoggingConfig:
+    level: str
+    logfile_path: str
+
+# Define a data class for a single pool configuration
+@dataclass
+class PoolConfig:
+    pool_name: str
+    zfs_tag: str
+    autobackup_parameters: Optional[str] = ""  # Optional, default is empty string
+    passphrase: Optional[str] = ""  # Optional, default is empty string
+
+# Define a data class for the application configuration including logging and pools
+@dataclass
+class AppConfig:
+    logging: Optional[LoggingConfig] = None
+    pools: Dict[str, PoolConfig] = field(default_factory=dict)
+    smtp: SmtpConfig = field(default=None)
+
+# Function to load and validate the YAML config
+def read_validate_config(config_path) -> AppConfig:
+    with open(config_path, 'r') as stream:
+        try:
+            config = yaml.safe_load(stream)
+
+            # Check for mandatory fields
+            if config.get('enabled') is None:
+                raise ValueError("The 'enabled' field is missing or not set.")
+            if config.get('logging') is None:
+                raise ValueError("The 'logging' field is missing or not set.")
+            elif config['logging'].get('logfile_path') is None:
+                raise ValueError("The 'logfile_path' field is missing or not set.")
+            if config.get('pools') is None or not config['pools']:
+                raise ValueError("The 'pools' field is missing or empty.")
+
+            # Check if 'smtp' key is present in the config
+            if 'smtp' in config:
+                required_keys = ['server', 'port', 'login', 'password', 'recipients']
+                missing_keys = [key for key in required_keys if key not in config['smtp']]
+                if missing_keys:
+                    raise ValueError(f"Missing required smtp config keys: {', '.join(missing_keys)}")
+                # Validate each email address in the comma-separated recipients list
+                recipients_str = config['smtp']['recipients']
+                if not isinstance(recipients_str, str) or not recipients_str:
+                    raise ValueError("The 'recipients' key must be a non-empty string.")
+                recipients = [email.strip() for email in recipients_str.split(',')]
+                invalid_emails = [email for email in recipients if not is_valid_email(email)]
+                if invalid_emails:
+                    raise ValueError(f"Invalid email addresses found: {', '.join(invalid_emails)}")
+                
+                # Add validated and stripped recipients back to the config
+                config['smtp']['recipients'] = recipients
+                smtp_conf = SmtpConfig(**config['smtp'])
+            else:
+                smtp_conf = None
+            
+
+
+            # Initialize logging configuration if it's present
+            logging_conf = None
+            if 'logging' in config:
+                logging_conf = LoggingConfig(**config['logging'])
+
+            # Initialize pool configurations if they're present
+            pool_confs = {}
+            if 'pools' in config:
+                for pool_key, pool_values in config['pools'].items():
+                    if 'pool_name' not in pool_values or 'zfs_tag' not in pool_values or 'autobackup_parameters' not in pool_values:
+                        raise ValueError(f"Pool '{pool_key}' is missing mandatory parameters 'pool_name', 'zfs_tag', 'autobackup_parameters'.")
+                    pool_confs[pool_values['pool_name']] = PoolConfig(**pool_values)
+            else:
+                raise ValueError(f"missing parameter pools'.")
+
+            # # Prepare the pools lookup table
+            # pools_lookup = {}
+            # # Check if each pool has all mandatory parameters and populate lookup table
+            # for pool_key, pool_data in config['pools'].items():
+                
+            #     # Add to the pools lookup table
+            #     pools_lookup[pool_data['pool_name']] = [
+            #         pool_data['pool_name'],
+            #         pool_data['zfs_tag'],
+            #         pool_data['autobackup_parameters'],
+            #         pool_data.get('passphrase', '')  # Default to '' if not explicitly set
+            #     ]
+        
+            # Return an AppConfig instance with logging and pool configurations
+            return AppConfig(smtp=smtp_conf, logging=logging_conf, pools=pool_confs)
+
+        except yaml.YAMLError as exc:
+            sys.exit(f"Error parsing YAML file: {exc}")
+        except ValueError as ve:
+            sys.exit(f"Configuration validation error: {ve}")
+
+def is_valid_email(email):
+    # Simple regex for validating an email address
+    pattern = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+    return re.match(pattern, email) is not None

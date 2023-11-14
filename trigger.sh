@@ -92,9 +92,10 @@ fi
 # Export deactivate function and the variables it depends on,
 # so child scripts can deactivate Python virtual environment
 # https://stackoverflow.com/a/37216784
-export _OLD_VIRTUAL_PATH _OLD_VIRTUAL_PYTHONHOME _OLD_VIRTUAL_PS1 VIRTUAL_ENV
-export -f deactivate
+# export _OLD_VIRTUAL_PATH _OLD_VIRTUAL_PYTHONHOME _OLD_VIRTUAL_PS1 VIRTUAL_ENV
+# export -f deactivate
 
 # Start monitoring udev events
 echo "Spawn monitor.py in the background..."
-(cd "${SCRIPT_DIR}" && python3 monitor.py &)
+# (cd "${SCRIPT_DIR}" && python3 monitor.py &)
+python3 monitor2.py config.yaml

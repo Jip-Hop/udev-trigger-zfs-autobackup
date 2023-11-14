@@ -1,0 +1,33 @@
+enabled: true
+# Configure logging. Remove this entirely if you don't want to write to a logfile.
+# Everything is also written to stdout
+# level: set the log level, currently everything is logged as INFO or ERROR
+# logfile_path: the absolute path to the logfile.
+logging:
+  level: "DEBUG"
+  logfile_path: "/mnt/path/to/logfile"
+# Enter an smtp configuration. Remove this config entirely, if you do not want so send mails.
+# Keep this config somewhere only root can read because you need to enter your mail password
+smtp:
+  server: "smtp.example.com"
+  port: 587
+  login: "your_email@example.com"
+  password: "your_password"
+  recipients: "recipient1@example.com, recipient2@example.com, recipient3@example.com"
+
+# List any pools you want to backup
+# - pool_name: the name of the pool, also the label under /dev/disk/by-label/
+# - zfs_tag: the zfs tag you set for zfs-autobackup
+# - autobackup_parameters: the command line arguments you want to pass to zfs-autobackup
+# - passphrase: optional encryption passphrase, can be an empty string
+pools:
+  pool1:
+    pool_name: "OnePool"
+    zfs_tag: "test"
+    autobackup_parameters: ""
+    passphrase: ""
+  pool2:
+    pool_name: "AnotherPool"
+    zfs_tag: "production"
+    autobackup_parameters: ""
+    passphrase: ""
