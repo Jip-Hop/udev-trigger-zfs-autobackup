@@ -36,7 +36,7 @@ def main(config_file: str):
     # Set up logging based on configuration
     logger = Logging(config.logging)
 
-    logger.log('started monitor.py with config:\n{config}')
+    logger.log(f"started monitor.py with config:\n{config}")
 
     start_udev_monitoring()
     start_waiting_for_udev_trigger()

@@ -118,6 +118,8 @@ trigger.sh --start /path/to/your/config.yaml
 
 You need to edit the config file. Make a copy of [config_template](./config_template.yaml) file and put it somewhere outside of your script directory to prevent it from being overwritten during updates. Specify the names of your backup pools and their zfs-autobackup parameters and encryption passphrase. Each backup pool can only have one configuration.
 
+If you modify the config you need to restart the script it with `trigger.sh --stop` and then `trigger.sh --start /path/to/your/config.yaml`.
+
 ### Schedule udev-trigger-zfs-autobackup
 
 The [trigger.sh](./trigger.sh) script needs to run on system startup. You need to manually this, for example using `cron` or `systemd`. On TrueNAS SCALE you can schedule the script via the web interface:
@@ -135,6 +137,8 @@ Add the `autobackup` property to the datasets you want to backup automatically t
 ## Trigger backup
 
 Connect your backup disk to trigger the automatic backup. You'll hear a beep confirming the start of the backup and you'll receive an email with the summary of the backup job. Once the backup is finished, you'll hear a beep every 3 seconds until you disconnect the disk.
+
+Note: udev is not instantaneous and it might take a few seconds to recognise that you connected or disconnected a disk.
 
 ## Disable automatic backup
 
