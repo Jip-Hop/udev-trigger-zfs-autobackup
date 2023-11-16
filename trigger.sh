@@ -161,23 +161,23 @@ start_application() {
 
     # Start monitoring udev events
     echo "Spawn monitor.py in the background..."
-    (cd "${SCRIPT_DIR}" && python3 monitor2.py $CONFIG_PATH &)
-    # python3 monitor2.py $CONFIG_PATH
+    (cd "${SCRIPT_DIR}" && python3 monitor.py $CONFIG_PATH &)
+    # python3 monitor.py $CONFIG_PATH
 }
 
 # Function to handle stop
 stop_application() {
     cd ${SCRIPT_DIR}
     echo "Stopping the application..."
-    # Find the PID of the python process running 'monitor2.py'
-    pid=$(pgrep -f 'python.*monitor2.py')
+    # Find the PID of the python process running 'monitor.py'
+    pid=$(pgrep -f 'python.*monitor.py')
 
     # Check if the PID was found
     if [ -n "$pid" ]; then
         echo "Killing process with PID: $pid"
         kill "$pid"
     else
-        echo "No running process found for 'monitor2.py'"
+        echo "No running process found for 'monitor.py'"
     fi
 }
 
