@@ -1727,3 +1727,4 @@ venv/lib/python3.9/site-packages/zfs_autobackup-3.1.1.dist-info/RECORD
 venv/lib/python3.9/site-packages/zfs_autobackup-3.1.1.dist-info/REQUESTED
 venv/lib/python3.9/site-packages/zfs_autobackup-3.1.1.dist-info/top_level.txt
 venv/lib/python3.9/site-packages/zfs_autobackup-3.1.1.dist-info/WHEEL
+__pycache__/backup.cpython-39.pyc

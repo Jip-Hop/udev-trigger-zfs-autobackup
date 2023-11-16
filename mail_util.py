@@ -39,5 +39,10 @@ def send_email(subject, body, config: SmtpConfig, logger: Logging):
     except Exception as e:
         logger.error(f"Error sending email to {config.recipients}: {e}")
 
-# Example usage
-# send_email("Test Subject", "This is a test body of the email.")
+def mail(message: str, config: SmtpConfig, logger: Logging):
+    logger.log(message)
+    send_email("ZFS-Autobackup with UDEV Trigger", message, config, logger)
+    
+def mail_error(message: str, config: SmtpConfig, logger: Logging):
+    logger.exception(message)
+    send_email("ERROR: ZFS-Autobackup with UDEV Trigger", message, config, logger)

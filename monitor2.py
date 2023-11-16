@@ -4,8 +4,7 @@
 
 # TODO: Translation: https://lokalise.com/blog/beginners-guide-to-python-i18n/
 
-from os.path import abspath
-from os.path import islink
+import os
 from subprocess import check_call
 import pyudev
 
@@ -18,8 +17,7 @@ import time
 import queue
 import sys
 from log_util import Logging
-from mail_util import send_email
-
+from backup import backup
 
 # Shared resources
 added_devices = queue.Queue()
@@ -62,16 +60,6 @@ def start_udev_monitoring():
     observer = pyudev.MonitorObserver(monitor, device_event)
     observer.start()
 
-    # for device in iter(monitor.poll, None):
-    #     logger.error('device %s event, action: %s, id: %s, label: %s', device, device.action, device.get('ID_FS_TYPE'), device.get('ID_FS_LABEL'))
-    #     if device.action == "add" and device.get('ID_FS_TYPE') == "zfs_member":
-    #         current_label = device.get('ID_FS_LABEL')
-    #         logger.error('label: %s', current_label)
-    #         try:
-    #             check_call([backup_script, current_label])
-    #         except Exception as e:
-    #             print(e)
-
 # Callback for device events
 def device_event(action, device):
     fs_type = device.get('ID_FS_TYPE')
@@ -101,10 +89,7 @@ def start_waiting_for_udev_trigger():
                 beep_pattern("101111001010", 0.2, 0.1)
                 device_label = added_devices.get()
                 print(f"added_devices: {added_devices}")
-                mail(f"Plugged in disk {device_label} that is matching configuration:\n"+
-                f"    {config.pools.get(device_label, None)}\n" + 
-                "    Starting backup! You will receive an email once the backup has compled and you can safely unplug the disk.")
-                backup(device_label)
+                backup(device_label, config, logger)
                 with finished_devices_lock:
                     finished_devices.add(device_label)  # Add to finished devices set
                 # added_devices.task_done()
@@ -112,19 +97,7 @@ def start_waiting_for_udev_trigger():
             # Reset the event in case this was the last added device being processed
             if added_devices.empty():
                 backup_event.clear()
-
-            # # If there are removed devices and no more added devices, begin beeping
-            # if added_devices.empty() and not removed_devices.empty():
-            #     # Beep for each removed device, but check for new added devices
-            #     while not removed_devices.empty():
-            #         if not added_devices.empty():  # If new added device, stop beeping and process it
-            #             break  # Break out of the removed devices loop to handle added device
-            #         device_label = removed_devices.get()
-            #         logger.log(f"Removed: {device_label}")
-            #         # removed_devices.task_done()
-            #         beep()
-            #         time.sleep(3)  # Beep every 3 seconds if removed devices list isn't empty
-            
+     
             # If there are finished devices and no more added devices, begin beeping
             # Continuously beep for finished devices if they are still connected
             while True:
@@ -137,47 +110,14 @@ def start_waiting_for_udev_trigger():
                 beep()
                 time.sleep(3)  # Delay between each check
 
-            # In case we broke out of beep because of an added device, make sure to clear the event
-            # so it doesn't immediately trigger another backup loop without an actual event.
-            # if not added_devices.empty():
-                # backup_event.clear()
-
     except KeyboardInterrupt:
         logger.log("Received KeyboardInterrupt...")
     except Exception as e:
-        logger.log(f"An unexpected error occurred: {e}")
+        logger.exception(f"An unexpected error occurred: {e}")
     finally:
         logger.log("Stopping PYUDEV and Shutting down...")
         observer.stop()  # Stop observer
         sys.exit(0)
-
-# Backup function
-def backup(device_label):
-    logger.log(f"Backing up {device_label}...")
-    time.sleep(10)
-    mail(f"Backup finished. You can safely unplug the disk {device_label} now")
-
-
-
-def mail(message: str):
-    logger.log(message)
-    send_email("ZFS-Autobackup with UDEV Trigger", message, config.smtp, logger)
-    # for recepient in config.smtp:
-    #     send_linux_mail("ZFS-Autobackup with UDEV Trigger", message, recepient)
-
-# def send_linux_mail(subject: str, body: str, recepient: str):
-#     # body_str_encoded_to_byte = body.encode()
-#     # return_stat = subprocess.run([f"mail", f"-s {Subject}", f"{Recepient}"], input=body_str_encoded_to_byte)
-#     return_stat = subprocess.run(
-#         ["mail", "-s", subject, recepient],
-#         input= body.encode('utf-8'),
-#         capture_output=True,  # to capture output for success/error diagnosis
-#         check=True  # to raise an exception if the command fails
-#     )
-#     if return_stat.returncode == 0:
-#         logger.log(return_stat)
-#     else:
-#         logger.error(return_stat)
 
 def is_device_connected(device_label):
     # Path where disk labels are linked

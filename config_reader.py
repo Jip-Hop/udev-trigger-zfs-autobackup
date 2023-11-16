@@ -1,8 +1,9 @@
 import sys
 import yaml
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional
+import json
 
 # Define a data class for your configuration
 @dataclass
@@ -12,20 +13,34 @@ class SmtpConfig:
     login: str
     password: str
     recipients: List[str]
+    send_autobackup_output: bool
+
+    def __str__(self):
+        data = asdict(self)
+        print(data)
+        data['password'] = '*****'  # Replace the password
+        print(data)
+        return json.dumps(data, indent=2)
 
 # Define a data class for the logging configuration
 @dataclass
 class LoggingConfig:
     level: str
     logfile_path: str
+    def __str__(self):
+        return json.dumps(asdict(self), indent=2)
 
 # Define a data class for a single pool configuration
 @dataclass
 class PoolConfig:
     pool_name: str
     zfs_tag: str
-    autobackup_parameters: Optional[str] = ""  # Optional, default is empty string
+    autobackup_parameters: List[str] = field(default_factory=list)
     passphrase: Optional[str] = ""  # Optional, default is empty string
+    def __str__(self):
+        data = asdict(self)
+        data['passphrase'] = '*****' if self.passphrase else self.passphrase  # Replace the passphrase
+        return json.dumps(data, indent=2)
 
 # Define a data class for the application configuration including logging and pools
 @dataclass
@@ -33,6 +48,14 @@ class AppConfig:
     logging: Optional[LoggingConfig] = None
     pools: Dict[str, PoolConfig] = field(default_factory=dict)
     smtp: SmtpConfig = field(default=None)
+    def __str__(self):
+        data = asdict(self)
+        if data.get('smtp'):
+            data['smtp']['password'] = '***'
+        for pool_key, pool in data.get('pools', {}).items():
+            if 'passphrase' in pool and pool['passphrase']:
+                data['pools'][pool_key]['passphrase'] = '***'
+        return json.dumps(data, indent=2)
 
 # Function to load and validate the YAML config
 def read_validate_config(config_path) -> AppConfig:
@@ -41,8 +64,6 @@ def read_validate_config(config_path) -> AppConfig:
             config = yaml.safe_load(stream)
 
             # Check for mandatory fields
-            if config.get('enabled') is None:
-                raise ValueError("The 'enabled' field is missing or not set.")
             if config.get('logging') is None:
                 raise ValueError("The 'logging' field is missing or not set.")
             elif config['logging'].get('logfile_path') is None:

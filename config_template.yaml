@@ -1,4 +1,3 @@
-enabled: true
 # Configure logging. Remove this entirely if you don't want to write to a logfile.
 # Everything is also written to stdout
 # level: set the log level, currently everything is logged as INFO or ERROR
@@ -14,9 +13,11 @@ smtp:
   login: "your_email@example.com"
   password: "your_password"
   recipients: "recipient1@example.com, recipient2@example.com, recipient3@example.com"
+  send_autobackup_output: true
 
 # List any pools you want to backup
 # - pool_name: the name of the pool, also the label under /dev/disk/by-label/
+#              current limitation is that each pool_name can only be used once
 # - zfs_tag: the zfs tag you set for zfs-autobackup
 # - autobackup_parameters: the command line arguments you want to pass to zfs-autobackup
 # - passphrase: optional encryption passphrase, can be an empty string
@@ -24,10 +25,24 @@ pools:
   pool1:
     pool_name: "OnePool"
     zfs_tag: "test"
-    autobackup_parameters: ""
+    autobackup_parameters:
+      - "-v"
+      - "--debug"
+      - "--clear-mountpoint"
+      - "--keep-source=10,1d1w,1w1m,1m1y"
+      - "--keep-target=10,1d1w,1w1m,1m1y"
+      - "zfs-label"
+      - "pool/path/to/target/dataset"
     passphrase: ""
   pool2:
     pool_name: "AnotherPool"
     zfs_tag: "production"
-    autobackup_parameters: ""
+    autobackup_parameters:
+      - "-v"
+      - "--debug"
+      - "--clear-mountpoint"
+      - "--keep-source=10,1d1w,1w1m,1m1y"
+      - "--keep-target=10,1d1w,1w1m,1m1y"
+      - "zfs-label2"
+      - "pool/path/to/target/dataset2"
     passphrase: ""

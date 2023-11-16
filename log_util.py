@@ -30,9 +30,10 @@ class Logging:
             print("Logging disabled")
 
     def log(self, message: str):
-        if self.enabled:
-            self.logger.info(message)
+        self.logger.info(message)
 
     def error(self, message: str):
-        if self.enabled:
-            self.logger.error(message)
+        self.logger.error(message)
+
+    def exception(self, message: str):
+        self.logger.exception(message)
