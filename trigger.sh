@@ -3,14 +3,21 @@
 set -euo pipefail
 
 SCRIPT_NAME=$(basename "${BASH_SOURCE[0]}")
+echo "$SCRIPT_NAME"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-cd ${SCRIPT_DIR}
+echo "$SCRIPT_DIR"
 
 STEPS=$(
     cat <<EOF
 1. Manually create (encrypted) ZFS pool(s) on removable disk(s).
 2. Manually edit config to specify the names of your backup pool(s), the zfs-autobackup parameters and the encryption passphrase.
-3. Manually schedule `trigger.sh --start` to run at system startup. On TrueNAS SCALE: System Settings -> Advanced -> Init/Shutdown Scripts -> Add -> Description: trigger-zfs-autobackup; Type: Script; Script: `/path/to/trigger.sh --start`; When: Post Init -> Save
+3. Manually schedule 'trigger.sh --start' to run at system startup.
+   On TrueNAS SCALE: System Settings -> Advanced -> Init/Shutdown Scripts -> Add
+    Description: trigger-zfs-autobackup;
+    Type: Script;
+    Script: '/path/to/trigger.sh --start';
+    When: Post Init
+   -> Save
 4. Manually insert backup disk whenever you want to make a backup.
 5. Automatic backup is triggered and sends email on completion.
 EOF
@@ -36,7 +43,7 @@ EOF
     exit
 }
 
-VENV="${SCRIPT_DIR}/venv"
+VENV="./venv"
 
 # Default values of variables set from params
 INSTALL=0
@@ -47,18 +54,6 @@ INSTALL_PARAMS=""
 
 # Define the GitHub repository URL
 REPO_URL="https://github.com/ghan1t/udev-trigger-zfs-autobackup.git"
-
-# Function to display help
-show_help() {
-    echo "Usage: $0 [options]"
-    echo "Options:"
-    echo "  -h, --help                      Show help."
-    echo "  -v, --verbose                   Enable verbose mode."
-    echo "  -i, --install [tag|hash|HEAD]   Install the application."
-    echo "  -s, --start                     Start the application."
-    echo "  -p, --stop                      Stop the application."
-    exit 0
-}
 
 # Function to check if Git is installed
 check_git() {
@@ -93,7 +88,7 @@ clone_repo() {
                 ;;
         esac
     done
-    
+
     if [ -d "./.git" ]; then
         [ $VERBOSE -eq 1 ] && echo "Repository already exists. Updating..."
         git fetch --tags --depth 1
@@ -143,6 +138,7 @@ install_dependencies() {
 
 # Function to handle start
 start_application() {
+    cd ${SCRIPT_DIR}
     echo "Starting the application..."
     if ! [ -d "${VENV}" ]; then
         echo -e "Virtual environment not found at ${VENV}.\nDid you run \"${SCRIPT_NAME} --install\" yet?"
@@ -165,6 +161,7 @@ start_application() {
 
 # Function to handle stop
 stop_application() {
+    cd ${SCRIPT_DIR}
     echo "Stopping the application..."
     # Find the PID of the python process running 'monitor2.py'
     pid=$(pgrep -f 'python.*monitor2.py')
@@ -192,11 +189,12 @@ parse_params() {
                 ;;
             -i | --install)
                 INSTALL=1
+                echo "install"
                 shift
-                if [ -z "$1" ] || [[ "$1" =~ ^- ]]; then
-                    INSTALL_PARAMS = "main"
+                if [ -z "${1-}" ] || [[ "${1-}" =~ ^- ]]; then
+                    INSTALL_PARAMS="main"
                 else
-                    INSTALL_PARAMS = "$1"
+                    INSTALL_PARAMS="$1"
                     shift
                 fi
                 ;;
@@ -218,6 +216,11 @@ parse_params() {
     return 0
 }
 
+die() {
+    echo "$*" 1>&2
+    exit 1
+}
+
 # Main function to parse arguments and control flow
 main() { 
 
@@ -230,13 +233,13 @@ main() {
     sum=$((INSTALL + START + STOP))
     if [ "$sum" -gt 1 ]; then
         echo "Error: More than one variable is set to true."
-    else
-        echo "The condition is met."
+    elif [ "$sum" -eq 0 ]; then
+        usage
     fi
 
     if [ "$INSTALL" = 1 ]; then
         # checkout script from github
-        clone_repo INSTALL_PARAMS
+        clone_repo "$INSTALL_PARAMS"
         install_dependencies
         
         echo "Done installing!"
@@ -259,4 +262,4 @@ main() {
     
 }
 
-main
+main "$@"
