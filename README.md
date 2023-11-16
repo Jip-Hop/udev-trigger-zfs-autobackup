@@ -14,11 +14,11 @@ Daemon to trigger zfs-autobackup when attaching backup disk.
 
 1. Manually create (encrypted) ZFS pool(s) on removable disk(s).
 2. Manually edit config to specify the names of your backup pool(s), the zfs-autobackup parameters and the encryption passphrase.
-3. Manually schedule `trigger.sh --start` to run at system startup.
+3. Manually schedule 'trigger.sh --start' to run at system startup.
    On TrueNAS SCALE: System Settings -> Advanced -> Init/Shutdown Scripts -> Add
     Description: trigger-zfs-autobackup;
     Type: Script;
-    Script: `/path/to/trigger.sh --start`;
+    Script: '/path/to/trigger.sh --start';
     When: Post Init 
    -> Save
 4. Manually insert backup disk whenever you want to make a backup.
@@ -91,13 +91,16 @@ cd udev-trigger-zfs-autobackup
 # Download trigger.sh
 curl -LJO https://raw.githubusercontent.com/ghan1t/udev-trigger-zfs-autobackup/main/trigger.sh
 
+# make trigger.sh executable
+chmod +x trigger.sh
+
 # Run install to download this repository, create a Python virtual environment and download dependencies to it.
-trigger.sh --install
+./trigger.sh --install
 
 # You can optionally specify which version of this script to download in case main is broken:
-trigger.sh --install <tag>  # download a specific tag
-trigger.sh --install <sha1> # download a specific commit hash
-trigger.sh --install HEAD   # download HEAD of the main branch
+./trigger.sh --install <tag>  # download a specific tag
+./trigger.sh --install <sha1> # download a specific commit hash
+./trigger.sh --install HEAD   # download HEAD of the main branch
 ```
 This will install the dependencies locally using a Python virtual environment. The installation makes no modifications to the system outside of its installation directory. This is to ensure `udev-trigger-zfs-autobackup` will survive updates of TrueNAS SCALE (as long as you store it on one of your data pools, and not on the disks where the TrueNAS base system is installed).
 
@@ -105,13 +108,13 @@ This will install the dependencies locally using a Python virtual environment. T
 Run the following commands 
 ```bash
 # Disable any running udev monitor
-trigger.sh --stop
+./trigger.sh --stop
 
 # Update the script and its dependencies
-trigger.sh --install
+./trigger.sh --install
 
 # Restart the udev monitor
-trigger.sh --start /path/to/your/config.yaml
+./trigger.sh --start /path/to/your/config.yaml
 ```
 
 ### Edit config
@@ -126,7 +129,7 @@ The [trigger.sh](./trigger.sh) script needs to run on system startup. You need t
 System Settings -> Advanced -> Init/Shutdown Scripts -> Add
   Description: trigger-zfs-autobackup;
   Type: Script;
-  Script: `/path/to/trigger.sh --start`;
+  Script: `/path/to/trigger.sh --start /path/to/your/config.yaml`;
   When: Post Init 
 -> Save
 

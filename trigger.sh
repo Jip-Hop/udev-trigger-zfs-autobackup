@@ -96,7 +96,8 @@ clone_repo() {
     # Clone the repository if it doesn't exist
     if [ ! -d "./.git" ]; then
         echo "Cloning repository..."
-        git clone $REPO_URL .
+        git init --initial-branch=main
+        git remote add origin $REPO_URL
     fi
 
     # Fetch all tags and branches and reset hard to main
@@ -121,39 +122,6 @@ clone_repo() {
     echo "Checking out $ref..."
     git checkout $ref
 
-    # if [ -d "./.git" ]; then
-    #     echo "bla"
-    #     echo "Repository already exists. Updating..."
-    #     echo "REF=$ref"
-    #     git fetch --tags --depth 1
-    #     if [ -z "$ref" ]; then
-    #         ref=$(git describe --tags `git rev-list --tags --max-count=1`)
-    #         echo "REF=$ref"
-    #     elif [ "$ref" = "HEAD" ]; then
-    #         ref="main"
-    #     # If the ref is a commit hash, fetch the full history
-    #     elif is_commit_hash "$ref"; then
-    #         git fetch --unshallow
-    #     fi
-    #     git checkout $ref
-    # else
-    #     if [ -z "$ref" ]; then
-    #         echo "Cloning repository and checking out the newest tag..."
-    #         git clone --depth 1 $REPO_URL .
-    #         ref=$(git describe --tags `git rev-list --tags --max-count=1`)
-    #         git checkout $ref
-    #     elif [ "$ref" = "HEAD" ]; then
-    #         echo "Cloning repository and checking out the HEAD of main branch..."
-    #         git clone --branch main --depth 1 $REPO_URL .
-        #     elif is_commit_hash "$ref"; then
-            #         echo "Cloning repository for a specific commit..."
-            #         git clone $REPO_URL .
-            #         git checkout $ref
-        #     else
-            #         echo "Cloning repository and checking out $ref..."
-            #         git clone --branch $ref --depth 1 $REPO_URL .
-        #     fi
-    # fi
 }
 
 # Function to install Python dependencies
