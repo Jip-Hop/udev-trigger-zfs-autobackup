@@ -82,13 +82,30 @@ Don't forget to re-enable the backups by executing `trigger.sh --start` in case 
 
 ### Install udev-trigger-zfs-autobackup
 
-Download this repository on the system you want to backup. Then install the dependencies by calling `trigger.sh --install` from the shell. This will install the dependencies locally using a Python virtual environment. The installation makes no modifications to the system outside of its installation directory. This is to ensure `udev-trigger-zfs-autobackup` will survive updates of TrueNAS SCALE (as long as you store it on one of your data pools, and not on the disks where the TrueNAS base system is installed).
+Download the trigger.sh file on the system you want to backup into a directory that will survive updates of TrueNAS Scale.
+```bash
+# Create a folder where you want to install the script
+mkdir udev-trigger-zfs-autobackup
+cd udev-trigger-zfs-autobackup
+
+# Download trigger.sh
+curl -LJO https://raw.githubusercontent.com/ghan1t/udev-trigger-zfs-autobackup/main/trigger.sh
+
+# Run install to download this repository, create a Python virtual environment and download dependencies to it.
+trigger.sh --install
+
+# You can optionally specify which version of this script to download in case main is broken:
+trigger.sh --install <tag>  # download a specific tag
+trigger.sh --install <sha1> # download a specific commit hash
+trigger.sh --install HEAD   # download HEAD of the main branch
+```
+This will install the dependencies locally using a Python virtual environment. The installation makes no modifications to the system outside of its installation directory. This is to ensure `udev-trigger-zfs-autobackup` will survive updates of TrueNAS SCALE (as long as you store it on one of your data pools, and not on the disks where the TrueNAS base system is installed).
 
 ### Update udev-trigger-zfs-autobackup
 Run the following commands 
 ```bash
 # Disable any running udev monitor
-trigger.sh --stopp
+trigger.sh --stop
 
 # Update the script and its dependencies
 trigger.sh --install
