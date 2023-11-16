@@ -76,7 +76,7 @@ clone_repo() {
 
     # Ask the user for confirmation
     while true; do
-        read -p "Do you want to install the script in this directory? (Y/N): " answer
+        read -p "Do you want to install the script in this directory? Any local changes might be lost. (Y/N): " answer
         case $answer in
             [Yy]* ) 
                 echo "Proceeding with installation..."
@@ -93,36 +93,67 @@ clone_repo() {
         esac
     done
 
-    if [ -d "./.git" ]; then
-        echo "Repository already exists. Updating..."
-        git fetch --tags --depth 1
-        if [ -z "$ref" ]; then
-            ref=$(git describe --tags `git rev-list --tags --max-count=1`)
-        elif [ "$ref" = "HEAD" ]; then
-            ref="main"
-        # If the ref is a commit hash, fetch the full history
-        elif is_commit_hash "$ref"; then
-            git fetch --unshallow
-        fi
-        git checkout $ref
-    else
-        if [ -z "$ref" ]; then
-            echo "Cloning repository and checking out the newest tag..."
-            git clone --depth 1 $REPO_URL .
-            ref=$(git describe --tags `git rev-list --tags --max-count=1`)
-            git checkout $ref
-        elif [ "$ref" = "HEAD" ]; then
-            echo "Cloning repository and checking out the HEAD of main branch..."
-            git clone --branch main --depth 1 $REPO_URL .
-        elif is_commit_hash "$ref"; then
-            echo "Cloning repository for a specific commit..."
-            git clone $REPO_URL .
-            git checkout $ref
-        else
-            echo "Cloning repository and checking out $ref..."
-            git clone --branch $ref --depth 1 $REPO_URL .
-        fi
+    # Clone the repository if it doesn't exist
+    if [ ! -d "./.git" ]; then
+        echo "Cloning repository..."
+        git clone $REPO_URL .
     fi
+
+    # Fetch all tags and branches and reset hard to main
+    git fetch --all
+    git reset --hard origin/main
+
+    # Determine the ref to checkout
+    if [ -z "$ref" ]; then
+        # Check if any tags exist, and use the newest tag; otherwise, use 'main'
+        if git tag | grep '.'; then
+            ref=$(git describe --tags `git rev-list --tags --max-count=1`)
+            echo "Checking out newest tag: $ref"
+        else
+            echo "No tag found, checking out origin/main"
+            ref="main"
+        fi
+    elif [ "$ref" = "HEAD" ]; then
+        ref="main"
+    fi
+
+    # Checkout the determined ref
+    echo "Checking out $ref..."
+    git checkout $ref
+
+    # if [ -d "./.git" ]; then
+    #     echo "bla"
+    #     echo "Repository already exists. Updating..."
+    #     echo "REF=$ref"
+    #     git fetch --tags --depth 1
+    #     if [ -z "$ref" ]; then
+    #         ref=$(git describe --tags `git rev-list --tags --max-count=1`)
+    #         echo "REF=$ref"
+    #     elif [ "$ref" = "HEAD" ]; then
+    #         ref="main"
+    #     # If the ref is a commit hash, fetch the full history
+    #     elif is_commit_hash "$ref"; then
+    #         git fetch --unshallow
+    #     fi
+    #     git checkout $ref
+    # else
+    #     if [ -z "$ref" ]; then
+    #         echo "Cloning repository and checking out the newest tag..."
+    #         git clone --depth 1 $REPO_URL .
+    #         ref=$(git describe --tags `git rev-list --tags --max-count=1`)
+    #         git checkout $ref
+    #     elif [ "$ref" = "HEAD" ]; then
+    #         echo "Cloning repository and checking out the HEAD of main branch..."
+    #         git clone --branch main --depth 1 $REPO_URL .
+        #     elif is_commit_hash "$ref"; then
+            #         echo "Cloning repository for a specific commit..."
+            #         git clone $REPO_URL .
+            #         git checkout $ref
+        #     else
+            #         echo "Cloning repository and checking out $ref..."
+            #         git clone --branch $ref --depth 1 $REPO_URL .
+        #     fi
+    # fi
 }
 
 # Function to install Python dependencies
@@ -195,11 +226,8 @@ parse_params() {
                 ;;
             -i | --install)
                 INSTALL=1
-                echo "install"
                 shift
-                if [ -z "${1-}" ] || [[ "${1-}" =~ ^- ]]; then
-                    INSTALL_PARAMS="main"
-                else
+                if [ -n "${1-}" ] && [[ ! "${1-}" =~ ^- ]]; then
                     INSTALL_PARAMS="$1"
                     shift
                 fi
