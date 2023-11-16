@@ -17,9 +17,7 @@ class SmtpConfig:
 
     def __str__(self):
         data = asdict(self)
-        print(data)
-        data['password'] = '*****'  # Replace the password
-        print(data)
+        data['password'] = '*****'  # Replace the password when logging
         return json.dumps(data, indent=2)
 
 # Define a data class for the logging configuration
@@ -39,7 +37,7 @@ class PoolConfig:
     passphrase: Optional[str] = ""  # Optional, default is empty string
     def __str__(self):
         data = asdict(self)
-        data['passphrase'] = '*****' if self.passphrase else self.passphrase  # Replace the passphrase
+        data['passphrase'] = '*****' if self.passphrase else self.passphrase  # Replace the passphrase when logging
         return json.dumps(data, indent=2)
 
 # Define a data class for the application configuration including logging and pools
@@ -92,8 +90,6 @@ def read_validate_config(config_path) -> AppConfig:
             else:
                 smtp_conf = None
             
-
-
             # Initialize logging configuration if it's present
             logging_conf = None
             if 'logging' in config:
@@ -109,19 +105,6 @@ def read_validate_config(config_path) -> AppConfig:
             else:
                 raise ValueError(f"missing parameter pools'.")
 
-            # # Prepare the pools lookup table
-            # pools_lookup = {}
-            # # Check if each pool has all mandatory parameters and populate lookup table
-            # for pool_key, pool_data in config['pools'].items():
-                
-            #     # Add to the pools lookup table
-            #     pools_lookup[pool_data['pool_name']] = [
-            #         pool_data['pool_name'],
-            #         pool_data['zfs_tag'],
-            #         pool_data['autobackup_parameters'],
-            #         pool_data.get('passphrase', '')  # Default to '' if not explicitly set
-            #     ]
-        
             # Return an AppConfig instance with logging and pool configurations
             return AppConfig(smtp=smtp_conf, logging=logging_conf, pools=pool_confs)
 

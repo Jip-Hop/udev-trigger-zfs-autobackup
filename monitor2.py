@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
 # To be called by trigger.sh
-
-# TODO: Translation: https://lokalise.com/blog/beginners-guide-to-python-i18n/
-
 import os
 from subprocess import check_call
 import pyudev
@@ -39,15 +36,7 @@ def main(config_file: str):
     # Set up logging based on configuration
     logger = Logging(config.logging)
 
-    logger.log('started monitor.py')
-
-    # Use the returned data sets
-    logger.log("General Configuration:")
-    logger.log(config)
-
-    logger.log("\nPools Lookup Table:")
-    for pool_name, pool_conf in config.pools.items():
-        logger.log(f"{pool_name}: {pool_conf}")
+    logger.log('started monitor.py with config:\n{config}')
 
     start_udev_monitoring()
     start_waiting_for_udev_trigger()
@@ -65,18 +54,17 @@ def device_event(action, device):
     fs_type = device.get('ID_FS_TYPE')
     fs_label = device.get('ID_FS_LABEL')
     fs_uuid = device.get('ID_FS_UUID')
-    print(f"Event {action} for {fs_label} action {device.action} uuid {fs_uuid}")
+    # print(f"Event {action} for {fs_label} action {device.action} uuid {fs_uuid}")
     if fs_type == "zfs_member" and fs_label and fs_label in config.pools:
         beep()
         if action == "add":
             added_devices.put(fs_label)
-            print(f"added: {added_devices}")
+            logger.log(f"udev observed add of pool {fs_label}")
             backup_event.set()
         elif action == "remove":
-            # removed_devices.put(fs_label)
+            logger.log(f"udev observed remove of pool {fs_label}")
             with finished_devices_lock:
                 finished_devices.discard(fs_label)  # Remove from finished devices set if it's removed
-            print(f"removed: {finished_devices}")
             backup_event.set()
 
 def start_waiting_for_udev_trigger():
@@ -88,11 +76,10 @@ def start_waiting_for_udev_trigger():
             while not added_devices.empty():
                 beep_pattern("101111001010", 0.2, 0.1)
                 device_label = added_devices.get()
-                print(f"added_devices: {added_devices}")
+                logger.log(f"Pool {device_label} has been added to queue. Starting backup...")
                 backup(device_label, config, logger)
                 with finished_devices_lock:
                     finished_devices.add(device_label)  # Add to finished devices set
-                # added_devices.task_done()
             
             # Reset the event in case this was the last added device being processed
             if added_devices.empty():

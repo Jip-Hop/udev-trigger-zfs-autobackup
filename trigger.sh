@@ -3,9 +3,7 @@
 set -euo pipefail
 
 SCRIPT_NAME=$(basename "${BASH_SOURCE[0]}")
-echo "$SCRIPT_NAME"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-echo "$SCRIPT_DIR"
 
 STEPS=$(
     cat <<EOF
@@ -15,7 +13,7 @@ STEPS=$(
    On TrueNAS SCALE: System Settings -> Advanced -> Init/Shutdown Scripts -> Add
     Description: trigger-zfs-autobackup;
     Type: Script;
-    Script: '/path/to/trigger.sh --start';
+    Script: '/path/to/trigger.sh --start /path/to/config.yaml';
     When: Post Init
    -> Save
 4. Manually insert backup disk whenever you want to make a backup.
@@ -33,11 +31,11 @@ $STEPS
 
 Available options:
 
--h, --help      Print this help and exit
--v, --verbose   Print script debug info
--i, --install   Install dependencies
--s, --start     Start the udev monitor
--p, --stop      Stop the udev monitor
+-h, --help                       Print this help and exit
+-v, --verbose                    Print script debug info
+-i, --install [HEAD,tag,hash]    Install dependencies
+-s, --start /path/to/config.yaml Start the udev monitor
+-p, --stop                       Stop the udev monitor
 
 EOF
     exit
@@ -48,6 +46,7 @@ VENV="./venv"
 # Default values of variables set from params
 INSTALL=0
 START=0
+CONFIG_PATH=""
 STOP=0
 VERBOSE=0
 INSTALL_PARAMS=""
@@ -61,6 +60,11 @@ check_git() {
         echo "Git is not installed. Please install Git and try again."
         exit 1
     fi
+}
+
+# Function to check if the reference is likely a commit hash
+is_commit_hash() {
+    [[ $1 =~ ^[0-9a-f]{7,40}$ ]]
 }
 
 # Function to clone the repository
@@ -90,25 +94,32 @@ clone_repo() {
     done
 
     if [ -d "./.git" ]; then
-        [ $VERBOSE -eq 1 ] && echo "Repository already exists. Updating..."
+        echo "Repository already exists. Updating..."
         git fetch --tags --depth 1
         if [ -z "$ref" ]; then
             ref=$(git describe --tags `git rev-list --tags --max-count=1`)
         elif [ "$ref" = "HEAD" ]; then
             ref="main"
+        # If the ref is a commit hash, fetch the full history
+        elif is_commit_hash "$ref"; then
+            git fetch --unshallow
         fi
         git checkout $ref
     else
         if [ -z "$ref" ]; then
-            [ $VERBOSE -eq 1 ] && echo "Cloning repository and checking out the newest tag..."
+            echo "Cloning repository and checking out the newest tag..."
             git clone --depth 1 $REPO_URL .
             ref=$(git describe --tags `git rev-list --tags --max-count=1`)
             git checkout $ref
         elif [ "$ref" = "HEAD" ]; then
-            [ $VERBOSE -eq 1 ] && echo "Cloning repository and checking out the HEAD of main branch..."
+            echo "Cloning repository and checking out the HEAD of main branch..."
             git clone --branch main --depth 1 $REPO_URL .
+        elif is_commit_hash "$ref"; then
+            echo "Cloning repository for a specific commit..."
+            git clone $REPO_URL .
+            git checkout $ref
         else
-            [ $VERBOSE -eq 1 ] && echo "Cloning repository and checking out $ref..."
+            echo "Cloning repository and checking out $ref..."
             git clone --branch $ref --depth 1 $REPO_URL .
         fi
     fi
@@ -116,7 +127,7 @@ clone_repo() {
 
 # Function to install Python dependencies
 install_dependencies() {
-    [ $VERBOSE -eq 1 ] && echo "Installing Python dependencies..."
+    echo "Installing Python dependencies..."
     # Check if the virtual environment directory exists
     if [ -d "${VENV}" ]; then
         echo "Virtual environment already exists. Activating and updating dependencies."
@@ -145,18 +156,13 @@ start_application() {
         exit
     fi
     # Activate the virtual environment
+    echo "Activating python venv in ${VENV}"
     . "${VENV}/bin/activate"
-
-    # Export deactivate function and the variables it depends on,
-    # so child scripts can deactivate Python virtual environment
-    # https://stackoverflow.com/a/37216784
-    # export _OLD_VIRTUAL_PATH _OLD_VIRTUAL_PYTHONHOME _OLD_VIRTUAL_PS1 VIRTUAL_ENV
-    # export -f deactivate
 
     # Start monitoring udev events
     echo "Spawn monitor.py in the background..."
-    # (cd "${SCRIPT_DIR}" && python3 monitor.py &)
-    python3 monitor2.py config.yaml
+    (cd "${SCRIPT_DIR}" && python3 monitor2.py $CONFIG_PATH &)
+    # python3 monitor2.py $CONFIG_PATH
 }
 
 # Function to handle stop
@@ -201,6 +207,12 @@ parse_params() {
             -s | --start)
                 START=1
                 shift
+                if [ -z "${1-}" ] || [[ "${1-}" =~ ^- ]]; then
+                    die "missing path to config.yaml file"
+                else
+                    CONFIG_PATH="$1"
+                    shift
+                fi
                 ;;
             -p | --stop)
                 STOP=1
@@ -232,9 +244,10 @@ main() {
     # Sum the variables
     sum=$((INSTALL + START + STOP))
     if [ "$sum" -gt 1 ]; then
-        echo "Error: More than one variable is set to true."
+        die "Error: More than one variable is set to true."
     elif [ "$sum" -eq 0 ]; then
         usage
+        exit
     fi
 
     if [ "$INSTALL" = 1 ]; then

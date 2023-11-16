@@ -4,7 +4,8 @@
 # logfile_path: the absolute path to the logfile.
 logging:
   level: "DEBUG"
-  logfile_path: "/mnt/path/to/logfile"
+  logfile_path: "/mnt/path/to/logfile.log"
+
 # Enter an smtp configuration. Remove this config entirely, if you do not want so send mails.
 # Keep this config somewhere only root can read because you need to enter your mail password
 smtp:
@@ -18,7 +19,7 @@ smtp:
 # List any pools you want to backup
 # - pool_name: the name of the pool, also the label under /dev/disk/by-label/
 #              current limitation is that each pool_name can only be used once
-# - zfs_tag: the zfs tag you set for zfs-autobackup
+# - zfs_tag: the zfs tag you set for zfs-autobackup (excluding 'autobackup:')
 # - autobackup_parameters: the command line arguments you want to pass to zfs-autobackup
 # - passphrase: optional encryption passphrase, can be an empty string
 pools:
