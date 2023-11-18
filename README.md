@@ -117,6 +117,34 @@ Run the following commands
 ./trigger.sh --start /path/to/your/config.yaml
 ```
 
+If the update of PyYAML fails, you can try the following:
+1. Force update PyYAML
+```bash
+# cd into your script directory
+cd /path/to/your/udev-trigger-directory
+
+# enter venv
+. venv/bin/activate
+
+# install PyYAML
+pip install --ignore-installed PyYAML
+
+# leave venv
+deactivate
+```
+
+2. Delete venv
+```bash
+# cd into your script directory
+cd /path/to/your/udev-trigger-directory
+
+# delete venv
+rm -rf venv
+
+# install fresh
+./trigger.sh --install
+```
+
 ### Edit config
 
 You need to edit the config file. Make a copy of [config_template](./config_template.yaml) file and put it somewhere outside of your script directory to prevent it from being overwritten during updates. Specify the names of your backup pools and their zfs-autobackup parameters and encryption passphrase. Each backup pool can only have one configuration.

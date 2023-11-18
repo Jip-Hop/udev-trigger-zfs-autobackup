@@ -166,7 +166,6 @@ start_application() {
 
 # Function to handle stop
 stop_application() {
-    cd ${SCRIPT_DIR}
     echo "Stopping the application..."
     # Find the PID of the python process running 'monitor.py'
     pid=$(pgrep -f 'python.*monitor.py')
@@ -177,6 +176,20 @@ stop_application() {
         kill "$pid"
     else
         echo "No running process found for 'monitor.py'"
+    fi
+}
+
+# Function to handle check-monitor
+check_monitor() {
+    echo "Checking if the application is running..."
+    # Find the PID of the python process running 'monitor.py'
+    pid=$(pgrep -f 'python.*monitor.py')
+
+    # Check if the PID was found
+    if [ -n "$pid" ]; then
+        echo "UDEV Monitor is running and has PID: $pid"
+    else
+        echo "UDEV Monitor is not running."
     fi
 }
 
@@ -214,6 +227,10 @@ parse_params() {
                 STOP=1
                 shift
                 ;;
+            -m | --check-monitor)
+                check_monitor
+                exit 0
+                ;;
             -?*) die "Unknown option: $1" ;;
             *) break ;;
         esac
@@ -243,7 +260,7 @@ main() {
         die "Error: More than one variable is set to true."
     elif [ "$sum" -eq 0 ]; then
         usage
-        exit
+        exit 0
     fi
 
     if [ "$INSTALL" = 1 ]; then
@@ -256,17 +273,17 @@ main() {
         echo ""
         echo -e "$STEPS"
 
-        exit
+        exit 0
     fi
 
     if [ "$START" = 1 ]; then
        start_application
-       exit
+       exit 0
     fi
 
     if [ "$STOP" = 1 ]; then
        stop_application
-       exit
+       exit 0
     fi
     
 }

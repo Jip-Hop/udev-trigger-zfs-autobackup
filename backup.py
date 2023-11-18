@@ -1,8 +1,7 @@
 import io
 import sys
 from contextlib import redirect_stdout
-# from zfs_autobackup.ZfsAutobackup import *
-from zfs_autobackup import cli
+from zfs_autobackup.ZfsAutobackup import *
 from typing import Optional
 from log_util import Logging
 from mail_util import mail, mail_error
