@@ -8,7 +8,7 @@ Monitors udev events to detect when new disks are attached. If the attached disk
 
 ## Usage
 ```
-Usage: trigger.sh [-h] [-v] [--install] [--start] [--stop]
+Usage: trigger.sh [-h] [-v] [--install] [--start] [--stop] [--check-monitor] [--test]
 
 Daemon to trigger zfs-autobackup when attaching backup disk.
 
@@ -31,6 +31,8 @@ Available options:
 -i, --install [HEAD,tag,hash]    Install dependencies
 -s, --start /path/to/config.yaml Start the udev monitor with your config.yaml file
 -p, --stop                       Stop the udev monitor
+-m, --check-monitor              Check if the udev monitor is running
+-t, --test /path/to/config.yaml  Test the zfs-autobackup with the given monitor. Disk must be already imported.
 ```
 
 ## Security

@@ -9,10 +9,10 @@ from config_reader import AppConfig
 import subprocess
 
 # Backup function
-def backup(device_label, config: AppConfig, logger: Logging):
+def import_decrypt_backup_export(device_label, config: AppConfig, logger: Logging):
     pool_config = config.pools.get(device_label, None)
     if pool_config is None:
-        mail(f"Plugged in disk {device_label} that is matching configuration. You can unplug it again safely.",
+        mail(f"Plugged in disk {device_label} that is not matching any configuration. You can unplug it again safely.",
              config.smtp, logger)
     else:
         mail(f"Plugged in disk {device_label} that is matching configuration:\n"+
@@ -27,33 +27,9 @@ def backup(device_label, config: AppConfig, logger: Logging):
                 mail_error(f"Failed to import pool. Backup not yet run.\n\nError:\n{result.stderr}", config.smtp, logger)
                 return
 
-            if pool_config.passphrase is not None and pool_config.passphrase:
-                logger.log(f"Decrypting pool {device_label}")
-                result = decrypt_pool(device_label, pool_config.passphrase, logger)
-                if result.returncode != 0:
-                    mail_error(f"Failed to decrypt pool. Backup not yet run.\n\nError:\n{result.stderr}", config.smtp, logger)
-                    return
-
-            logger.log(f"Starting ZFS-Autobackup for pool {device_label} with parameters:\n" +
-                        "zfs-autobackup" + " ".join(pool_config.autobackup_parameters))
-            captured_output = run_zfs_autobackup(pool_config.autobackup_parameters, logger)
-            # Assuming run_zfs_autobackup returns a string, check if it indicates an error
-            if "error" in captured_output.lower():
-                if config.smtp.send_autobackup_output:
-                    mail_error(f"ZFS autobackup error! Disk will not be exported automatically:\n\n{captured_output}", config.smtp, logger)
-                else:
-                    mail_error(f"ZFS autobackup error! Disk will not be exported automatically. Check logs for details.", config.smtp, logger)
+            if not decrypt_and_backup(device_label, pool_config, logger):
                 return
-            else:
-                logger.log(captured_output)
-                
-
-            logger.log(f"Setting pool {device_label} to read-only")
-            result = set_pool_readonly(device_label, logger)
-            if result.returncode != 0:
-                mail_error(f"Failed to set pool readonly. Disk will not be exported automatically.\n\nError:\n{result.stderr}", config.smtp, logger)
-                return
-
+            
             logger.log(f"Exporting {device_label}")
             result = export_pool(device_label, logger)
             if result.returncode != 0:
@@ -66,8 +42,43 @@ def backup(device_label, config: AppConfig, logger: Logging):
                 mail(f"Backup finished. You can safely unplug the disk {device_label} now.", config.smtp, logger)
 
         except Exception as e:
-            mail_error(f"An unexpected error occurred. Backup mail have failed. Please investigate.\n\nError:\n{e}", config.smtp, logger)
+            mail_error(f"An unexpected error occurred. Backup may have failed. Please investigate.\n\nError:\n{e}", config.smtp, logger)
         
+def decrypt_and_backup(device_label, config: AppConfig, logger: Logging) -> bool:
+    pool_config = config.pools.get(device_label, None)
+    if pool_config is None:
+        mail(f"Plugged in disk {device_label} that is not matching any configuration. You can unplug it again safely.",
+             config.smtp, logger)
+    else:
+        try:
+            if pool_config.passphrase is not None and pool_config.passphrase:
+                logger.log(f"Decrypting pool {device_label}")
+                result = decrypt_pool(device_label, pool_config.passphrase, logger)
+                if result.returncode != 0:
+                    mail_error(f"Failed to decrypt pool. Backup not yet run.\n\nError:\n{result.stderr}", config.smtp, logger)
+                    return False
+
+            logger.log(f"Starting ZFS-Autobackup for pool {device_label} with parameters:\nzfs-autobackup" + " ".join(pool_config.autobackup_parameters))
+            captured_output = run_zfs_autobackup(pool_config.autobackup_parameters, logger)
+            # Assuming run_zfs_autobackup returns a string, check if it indicates an error
+            if "error" in captured_output.lower():
+                if config.smtp.send_autobackup_output:
+                    mail_error(f"ZFS autobackup error! Disk will not be exported automatically:\n\n{captured_output}", config.smtp, logger)
+                else:
+                    mail_error(f"ZFS autobackup error! Disk will not be exported automatically. Check logs for details.", config.smtp, logger)
+                return False
+            else:
+                logger.log(captured_output)
+                
+            logger.log(f"Setting pool {device_label} to read-only")
+            result = set_pool_readonly(device_label, logger)
+            if result.returncode != 0:
+                mail_error(f"Failed to set pool readonly. Disk will not be exported automatically.\n\nError:\n{result.stderr}", config.smtp, logger)
+                return False
+            return True
+        except Exception as e:
+            mail_error(f"An unexpected error occurred. Backup may have failed. Please investigate.\n\nError:\n{e}", config.smtp, logger)
+            return False
 
 def run_zfs_autobackup(args, logger: Logging) -> str:
     """

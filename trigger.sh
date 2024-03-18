@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -o pipefail
 
 SCRIPT_NAME=$(basename "${BASH_SOURCE[0]}")
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -23,7 +23,7 @@ EOF
 
 usage() {
     cat <<EOF
-Usage: ${SCRIPT_NAME} [-h] [-v] [--install] [--start] [--stop]
+Usage: ${SCRIPT_NAME} [-h] [-v] [--install] [--start] [--stop] [--check-monitor] [--test]
 
 Daemon to trigger zfs-autobackup when attaching backup disk.
 
@@ -36,6 +36,8 @@ Available options:
 -i, --install [HEAD,tag,hash]    Install dependencies
 -s, --start /path/to/config.yaml Start the udev monitor
 -p, --stop                       Stop the udev monitor
+-m, --check-monitor              Check if the udev monitor is running
+-t, --test /path/to/config.yaml  Test the zfs-autobackup with the given monitor. Disk must be already imported.
 
 EOF
     exit
@@ -49,6 +51,7 @@ START=0
 CONFIG_PATH=""
 STOP=0
 VERBOSE=0
+TEST=0
 INSTALL_PARAMS=""
 
 # Define the GitHub repository URL
@@ -193,6 +196,26 @@ check_monitor() {
     fi
 }
 
+# Function to handle manual test of zfs-autobackup with given config
+test_zfs_autobackup() {
+    cd ${SCRIPT_DIR}
+    echo "Starting the application..."
+    if ! [ -d "${VENV}" ]; then
+        echo -e "Virtual environment not found at ${VENV}.\nDid you run \"${SCRIPT_NAME} --install\" yet?"
+        exit
+    fi
+    # Activate the virtual environment
+    echo "Activating python venv in ${VENV}"
+    . "${VENV}/bin/activate"
+    # setting installed packages into pythonpath if installation is somehow broken
+    #export PYTHONPATH="${VENV}/lib/python3.11/site-packages:${VENV}/lib64/python3.11/site-packages:$PYTHONPATH"
+
+    # Execute the config as a test
+    echo "Executing zfs-autobackup with ${CONFIG_PATH}"
+    # python3 monitor.py --test $CONFIG_PATH
+    (cd "${SCRIPT_DIR}" && python3 monitor.py --test $CONFIG_PATH)
+}
+
 parse_params() {
 
     while :; do
@@ -231,6 +254,16 @@ parse_params() {
                 check_monitor
                 exit 0
                 ;;
+            -t | --test)
+                TEST=1
+                shift
+                if [ -z "${1-}" ] || [[ "${1-}" =~ ^- ]]; then
+                    die "missing path to config.yaml file"
+                else
+                    CONFIG_PATH="$1"
+                    shift
+                fi
+                ;;
             -?*) die "Unknown option: $1" ;;
             *) break ;;
         esac
@@ -255,7 +288,7 @@ main() {
 
     # Check if exactly one argument is provided
     # Sum the variables
-    sum=$((INSTALL + START + STOP))
+    sum=$((INSTALL + START + STOP + TEST))
     if [ "$sum" -gt 1 ]; then
         die "Error: More than one variable is set to true."
     elif [ "$sum" -eq 0 ]; then
@@ -283,6 +316,11 @@ main() {
 
     if [ "$STOP" = 1 ]; then
        stop_application
+       exit 0
+    fi
+
+    if [ "$TEST" = 1 ]; then
+       test_zfs_autobackup
        exit 0
     fi
     

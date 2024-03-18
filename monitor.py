@@ -14,7 +14,7 @@ import time
 import queue
 import sys
 from log_util import Logging
-from backup import backup
+from backup import decrypt_and_backup, import_decrypt_backup_export
 
 # Shared resources
 added_devices = queue.Queue()
@@ -29,7 +29,7 @@ pools_lookup = None
 config = None
 logger = None
 
-def main(config_file: str):
+def main(config_file: str, test: bool):
     global config, logger
     config = read_validate_config(config_file)
 
@@ -37,9 +37,15 @@ def main(config_file: str):
     logger = Logging(config.logging)
 
     logger.log(f"started monitor.py with config:\n{config}")
-
-    start_udev_monitoring()
-    start_waiting_for_udev_trigger()
+    if test:
+        for device_label in config.pools:
+            if is_device_connected(device_label):
+                beep_pattern("1111001010", 0.2, 0.1)
+                logger.log(f"Starting manual backup on Pool {device_label}...")
+                decrypt_and_backup(device_label, config, logger)
+    else:
+        start_udev_monitoring()
+        start_waiting_for_udev_trigger()        
 
 def start_udev_monitoring():
     logger.log('Using pyudev version: {0}'.format(pyudev.__version__))
@@ -77,7 +83,7 @@ def start_waiting_for_udev_trigger():
                 beep_pattern("101111001010", 0.2, 0.1)
                 device_label = added_devices.get()
                 logger.log(f"Pool {device_label} has been added to queue. Starting backup...")
-                backup(device_label, config, logger)
+                import_decrypt_backup_export(device_label, config, logger)
                 with finished_devices_lock:
                     finished_devices.add(device_label)  # Add to finished devices set
             
@@ -130,8 +136,9 @@ if __name__ == "__main__":
      # Set up command-line argument parsing
     parser = argparse.ArgumentParser(description="Process a YAML config file.")
     parser.add_argument('config_file', type=str, help='Path to the YAML config file to be processed')
+    parser.add_argument("--test", help="test the zfs-backup with the given YAML config file", action="store_true")
 
     # Parse command-line arguments
     args = parser.parse_args()
 
-    main(args.config_file)
+    main(args.config_file, args.test)
