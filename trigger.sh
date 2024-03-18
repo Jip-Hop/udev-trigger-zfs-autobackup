@@ -23,7 +23,7 @@ EOF
 
 usage() {
     cat <<EOF
-Usage: ${SCRIPT_NAME} [-h] [-v] [--install] [--start] [--stop] [--check-monitor] [--test]
+Usage: ${SCRIPT_NAME} [-h] [-v] [--install] [--force-install] [--start] [--stop] [--check-monitor] [--test]
 
 Daemon to trigger zfs-autobackup when attaching backup disk.
 
@@ -34,6 +34,7 @@ Available options:
 -h, --help                       Print this help and exit
 -v, --verbose                    Print script debug info
 -i, --install [HEAD,tag,hash]    Install dependencies
+-f, --force-install              Force the installation of dependencies by deleting the venv.
 -s, --start /path/to/config.yaml Start the udev monitor
 -p, --stop                       Stop the udev monitor
 -m, --check-monitor              Check if the udev monitor is running
@@ -47,6 +48,7 @@ VENV="./venv"
 
 # Default values of variables set from params
 INSTALL=0
+FORCE=0
 START=0
 CONFIG_PATH=""
 STOP=0
@@ -79,7 +81,7 @@ clone_repo() {
 
     # Ask the user for confirmation
     while true; do
-        read -p "Do you want to install the script in this directory? Any local changes might be lost. (Y/N): " answer
+        read -p "Do you want to install the script in this directory? Any local changes WILL be lost. (Y/N): " answer
         case $answer in
             [Yy]* ) 
                 echo "Proceeding with installation..."
@@ -130,6 +132,10 @@ clone_repo() {
 # Function to install Python dependencies
 install_dependencies() {
     echo "Installing Python dependencies..."
+     if [ "$FORCE" = 1 ]; then
+        echo "With force-install option, we first delete the venv"
+        rm -rf "${VENV}"
+    fi
     # Check if the virtual environment directory exists
     if [ -d "${VENV}" ]; then
         echo "Virtual environment already exists. Activating and updating dependencies."
@@ -235,6 +241,11 @@ parse_params() {
                     INSTALL_PARAMS="$1"
                     shift
                 fi
+                ;;
+            -f | --force-install)
+                FORCE=1
+                INSTALL=1
+                shift
                 ;;
             -s | --start)
                 START=1

@@ -8,7 +8,7 @@ Monitors udev events to detect when new disks are attached. If the attached disk
 
 ## Usage
 ```
-Usage: trigger.sh [-h] [-v] [--install] [--start] [--stop] [--check-monitor] [--test]
+Usage: trigger.sh [-h] [-v] [--install] [--force-install] [--start] [--stop] [--check-monitor] [--test]
 
 Daemon to trigger zfs-autobackup when attaching backup disk.
 
@@ -29,6 +29,7 @@ Available options:
 -h, --help                       Print this help and exit
 -v, --verbose                    Print script debug info
 -i, --install [HEAD,tag,hash]    Install dependencies
+-f, --force-install              Force the installation of dependencies by deleting the venv.
 -s, --start /path/to/config.yaml Start the udev monitor with your config.yaml file
 -p, --stop                       Stop the udev monitor
 -m, --check-monitor              Check if the udev monitor is running
@@ -135,16 +136,10 @@ pip install --ignore-installed PyYAML
 deactivate
 ```
 
-2. Delete venv
+2. Delete venv with -f, --force-install 
 ```bash
-# cd into your script directory
-cd /path/to/your/udev-trigger-directory
-
-# delete venv
-rm -rf venv
-
 # install fresh
-./trigger.sh --install
+./trigger.sh --force-install
 ```
 
 ### Edit config
