@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional
 import json
+from itertools import chain
 
 # Define a data class for your configuration
 @dataclass
@@ -32,6 +33,7 @@ class LoggingConfig:
 @dataclass
 class PoolConfig:
     pool_name: str
+    split_parameters: bool
     autobackup_parameters: List[str] = field(default_factory=list)
     passphrase: Optional[str] = ""  # Optional, default is empty string
     def __str__(self):
@@ -100,6 +102,12 @@ def read_validate_config(config_path) -> AppConfig:
                 for pool_key, pool_values in config['pools'].items():
                     if 'pool_name' not in pool_values or 'autobackup_parameters' not in pool_values:
                         raise ValueError(f"Pool '{pool_key}' is missing mandatory parameters 'pool_name', 'autobackup_parameters'.")
+                    if 'split_parameters' not in pool_values:
+                        pool_values['split_parameters'] = True
+                    if pool_values['split_parameters']:
+                        # Use map to apply split_if_space to each argument, then flatten the result
+                        pool_values['autobackup_parameters'] = list(chain.from_iterable(map(split_if_space, pool_values['autobackup_parameters'])))
+
                     pool_confs[pool_values['pool_name']] = PoolConfig(**pool_values)
             else:
                 raise ValueError(f"missing parameter pools'.")
@@ -116,3 +124,7 @@ def is_valid_email(email):
     # Simple regex for validating an email address
     pattern = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
     return re.match(pattern, email) is not None
+
+def split_if_space(arg: str) -> List[str]:
+    # Split the argument by spaces if it contains any, otherwise return it as a single-element list.
+    return arg.split(' ') if ' ' in arg else [arg]
