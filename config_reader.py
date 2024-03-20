@@ -32,7 +32,6 @@ class LoggingConfig:
 @dataclass
 class PoolConfig:
     pool_name: str
-    zfs_tag: str
     autobackup_parameters: List[str] = field(default_factory=list)
     passphrase: Optional[str] = ""  # Optional, default is empty string
     def __str__(self):
@@ -99,8 +98,8 @@ def read_validate_config(config_path) -> AppConfig:
             pool_confs = {}
             if 'pools' in config:
                 for pool_key, pool_values in config['pools'].items():
-                    if 'pool_name' not in pool_values or 'zfs_tag' not in pool_values or 'autobackup_parameters' not in pool_values:
-                        raise ValueError(f"Pool '{pool_key}' is missing mandatory parameters 'pool_name', 'zfs_tag', 'autobackup_parameters'.")
+                    if 'pool_name' not in pool_values or 'autobackup_parameters' not in pool_values:
+                        raise ValueError(f"Pool '{pool_key}' is missing mandatory parameters 'pool_name', 'autobackup_parameters'.")
                     pool_confs[pool_values['pool_name']] = PoolConfig(**pool_values)
             else:
                 raise ValueError(f"missing parameter pools'.")

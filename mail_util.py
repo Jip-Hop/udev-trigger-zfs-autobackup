@@ -27,7 +27,6 @@ def send_email(subject, body, config: SmtpConfig, logger: Logging):
 
     # Send the email to all recipients
     message['To'] = config.recipients#['smtp']['recipients']  # Set current recipient
-
     # Send the email
     try:
         # Create an SMTP object and specify the server and the port
@@ -44,5 +43,9 @@ def mail(message: str, config: SmtpConfig, logger: Logging):
     send_email("ZFS-Autobackup with UDEV Trigger", message, config, logger)
     
 def mail_error(message: str, config: SmtpConfig, logger: Logging):
+    logger.error(message)
+    send_email("ERROR: ZFS-Autobackup with UDEV Trigger", message, config, logger)
+
+def mail_exception(message: str, config: SmtpConfig, logger: Logging):
     logger.exception(message)
     send_email("ERROR: ZFS-Autobackup with UDEV Trigger", message, config, logger)

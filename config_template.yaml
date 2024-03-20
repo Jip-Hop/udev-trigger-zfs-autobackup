@@ -19,13 +19,11 @@ smtp:
 # List any pools you want to backup
 # - pool_name: the name of the pool, also the label under /dev/disk/by-label/
 #              current limitation is that each pool_name can only be used once
-# - zfs_tag: the zfs tag you set for zfs-autobackup (excluding 'autobackup:')
 # - autobackup_parameters: the command line arguments you want to pass to zfs-autobackup
 # - passphrase: optional encryption passphrase, can be an empty string
 pools:
   pool1:
     pool_name: "OnePool"
-    zfs_tag: "test"
     autobackup_parameters:
       - "-v"
       - "--debug"
@@ -37,7 +35,6 @@ pools:
     passphrase: ""
   pool2:
     pool_name: "AnotherPool"
-    zfs_tag: "production"
     autobackup_parameters:
       - "-v"
       - "--debug"
