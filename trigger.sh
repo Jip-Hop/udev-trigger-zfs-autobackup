@@ -304,6 +304,7 @@ main() {
         die "Error: More than one variable is set to true."
     elif [ "$sum" -eq 0 ]; then
         usage
+        sleep 1
         exit 0
     fi
 
@@ -316,22 +317,26 @@ main() {
         echo "Follow these steps next:"
         echo ""
         echo -e "$STEPS"
-
+        
+        sleep 1
         exit 0
     fi
 
     if [ "$START" = 1 ]; then
        start_application
+       sleep 1
        exit 0
     fi
 
     if [ "$STOP" = 1 ]; then
        stop_application
-       exit 0
+       sleep 1
+      exit 0
     fi
 
     if [ "$TEST" = 1 ]; then
        test_zfs_autobackup
+       sleep 1
        exit 0
     fi
     

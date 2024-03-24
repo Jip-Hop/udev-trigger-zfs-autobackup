@@ -5,7 +5,7 @@ from zfs_autobackup.ZfsAutobackup import *
 from typing import Optional
 from log_util import Logging
 from mail_util import mail, mail_error, mail_exception
-from config_reader import AppConfig
+from config_reader import AppConfig, PoolConfig
 import subprocess
 
 # Backup function
@@ -17,7 +17,7 @@ def import_decrypt_backup_export(device_label, config: AppConfig, logger: Loggin
     else:
         mail(f"Plugged in disk {device_label} that is matching configuration:\n"+
              f"{pool_config}\n\n" + 
-              "Starting the backup now. You will receive an email once the backup has compled and you can safely unplug the disk.",
+              "Starting the backup now. You will receive an email once the backup has completed and you can safely unplug the disk.",
              config.smtp, logger)
 
         try:
@@ -44,8 +44,7 @@ def import_decrypt_backup_export(device_label, config: AppConfig, logger: Loggin
         except Exception as e:
             mail_error(f"An unexpected error occurred. Backup may have failed. Please investigate.\n\nError:\n{e}", config.smtp, logger)
         
-def decrypt_and_backup(device_label, config: AppConfig, logger: Logging) -> bool:
-    pool_config = config.pools.get(device_label, None)
+def decrypt_and_backup(device_label, pool_config: PoolConfig, logger: Logging) -> bool:
     if pool_config is None:
         mail(f"Plugged in disk {device_label} that is not matching any configuration. You can unplug it again safely.",
              config.smtp, logger)
