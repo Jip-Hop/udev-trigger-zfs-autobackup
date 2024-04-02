@@ -42,7 +42,7 @@ def main(config_file: str, test: bool):
             if is_device_connected(device_label):
                 beep_pattern("1111001010", 0.2, 0.1)
                 logger.log(f"Starting manual backup on Pool {device_label}...")
-                decrypt_and_backup(device_label, pool_config, logger)
+                decrypt_and_backup(device_label, pool_config, config, logger)
     else:
         start_udev_monitoring()
         start_waiting_for_udev_trigger()        

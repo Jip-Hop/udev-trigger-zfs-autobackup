@@ -27,7 +27,7 @@ def import_decrypt_backup_export(device_label, config: AppConfig, logger: Loggin
                 mail_error(f"Failed to import pool. Backup not yet run.\n\nError:\n{result.stderr}", config.smtp, logger)
                 return
 
-            if not decrypt_and_backup(device_label, pool_config, logger):
+            if not decrypt_and_backup(device_label, pool_config, config, logger):
                 return
             
             logger.log(f"Exporting {device_label}")
@@ -44,7 +44,7 @@ def import_decrypt_backup_export(device_label, config: AppConfig, logger: Loggin
         except Exception as e:
             mail_error(f"An unexpected error occurred. Backup may have failed. Please investigate.\n\nError:\n{e}", config.smtp, logger)
         
-def decrypt_and_backup(device_label, pool_config: PoolConfig, logger: Logging) -> bool:
+def decrypt_and_backup(device_label, pool_config: PoolConfig, config: AppConfig, logger: Logging) -> bool:
     if pool_config is None:
         mail(f"Plugged in disk {device_label} that is not matching any configuration. You can unplug it again safely.",
              config.smtp, logger)
