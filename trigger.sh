@@ -23,7 +23,7 @@ EOF
 
 usage() {
     cat <<EOF
-Usage: ${SCRIPT_NAME} [-h] [-v] [--install] [--force-install] [--start] [--stop] [--check-monitor] [--test]
+Usage: ${SCRIPT_NAME} [-h] [-v] [--install] [--force-install] [--update-dependencies] [--start] [--stop] [--check-monitor] [--test]
 
 Daemon to trigger zfs-autobackup when attaching backup disk.
 
@@ -33,8 +33,9 @@ Available options:
 
 -h, --help                       Print this help and exit
 -v, --verbose                    Print script debug info
--i, --install [HEAD,tag,hash]    Install dependencies
+-i, --install [HEAD,tag,hash]    Install script and dependencies
 -f, --force-install              Force the installation of dependencies by deleting the venv.
+-u, --update-dependencies        Update dependencies only
 -s, --start /path/to/config.yaml Start the udev monitor
 -p, --stop                       Stop the udev monitor
 -m, --check-monitor              Check if the udev monitor is running
@@ -49,6 +50,7 @@ VENV="./venv"
 # Default values of variables set from params
 INSTALL=0
 FORCE=0
+UPDATE_DEPENDENCIES=0
 START=0
 CONFIG_PATH=""
 STOP=0
@@ -131,6 +133,8 @@ clone_repo() {
 
 # Function to install Python dependencies
 install_dependencies() {
+    cd ${SCRIPT_DIR}
+
     echo "Installing Python dependencies..."
      if [ "$FORCE" = 1 ]; then
         echo "With force-install option, we first delete the venv"
@@ -152,7 +156,30 @@ install_dependencies() {
     curl -fSL https://bootstrap.pypa.io/get-pip.py | python3
     # Install our dependencies inside the virtual environment
     python3 -m pip install -r requirements.txt
+
+    deactivate
     
+}
+
+# Function to update Python dependencies
+update_dependencies() {
+    cd ${SCRIPT_DIR}
+    
+    echo "Updating Python dependencies..."
+    
+    # Check if the virtual environment directory exists
+    if ! [ -d "${VENV}" ]; then
+        echo -e "Virtual environment not found at ${VENV}.\nDid you run \"${SCRIPT_NAME} --install\" yet?"
+        exit
+    fi
+
+    # Activate the virtual environment
+    . "${VENV}/bin/activate"
+
+    # Install our dependencies inside the virtual environment
+    python3 -m pip install -r requirements.txt
+
+    deactivate
 }
 
 # Function to handle start
@@ -247,6 +274,10 @@ parse_params() {
                 INSTALL=1
                 shift
                 ;;
+            -u | --update-dependencies)
+                UPDATE_DEPENDENCIES=1
+                shift
+                ;;
             -s | --start)
                 START=1
                 shift
@@ -299,7 +330,7 @@ main() {
 
     # Check if exactly one argument is provided
     # Sum the variables
-    sum=$((INSTALL + START + STOP + TEST))
+    sum=$((INSTALL + START + STOP + TEST + UPDATE_DEPENDENCIES))
     if [ "$sum" -gt 1 ]; then
         die "Error: More than one variable is set to true."
     elif [ "$sum" -eq 0 ]; then
@@ -318,6 +349,12 @@ main() {
         echo ""
         echo -e "$STEPS"
         
+        sleep 1
+        exit 0
+    fi
+
+    if [ "$UPDATE_DEPENDENCIES" = 1 ]; then
+        update_dependencies
         sleep 1
         exit 0
     fi

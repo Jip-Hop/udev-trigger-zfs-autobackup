@@ -8,7 +8,7 @@ Monitors udev events to detect when new disks are attached. If the attached disk
 
 ## Usage
 ```
-Usage: trigger.sh [-h] [-v] [--install] [--force-install] [--start] [--stop] [--check-monitor] [--test]
+Usage: trigger.sh [-h] [-v] [--install] [--force-install] [--update-dependencies] [--start] [--stop] [--check-monitor] [--test]
 
 Daemon to trigger zfs-autobackup when attaching backup disk.
 
@@ -28,8 +28,9 @@ Available options:
 
 -h, --help                       Print this help and exit
 -v, --verbose                    Print script debug info
--i, --install [HEAD,tag,hash]    Install dependencies
+-i, --install [HEAD,tag,hash]    Install script and dependencies
 -f, --force-install              Force the installation of dependencies by deleting the venv.
+-u, --update-dependencies        Update dependencies only
 -s, --start /path/to/config.yaml Start the udev monitor with your config.yaml file
 -p, --stop                       Stop the udev monitor
 -m, --check-monitor              Check if the udev monitor is running
@@ -167,6 +168,31 @@ Add the `autobackup` property to the datasets you want to backup automatically t
 Connect your backup disk to trigger the automatic backup. You'll hear a beep confirming the start of the backup and you'll receive an email with the summary of the backup job. Once the backup is finished, you'll hear a beep every 3 seconds until you disconnect the disk.
 
 Note: udev is not instantaneous and it might take a few seconds to recognise that you connected or disconnected a disk.
+
+### Manual trigger
+
+If your backup somehow failed and you want to try again without unplugging the disk, you can do the following:
+
+1. Export pool
+```bash
+zpool export PoolName
+```
+
+2. Restart Script
+```bash
+./trigger.sh --stop
+./trigger.sh --start /path/to/your/config.yaml
+```
+
+3. Figure out your disks device name (e.g. 'sdg')
+```bash
+ls -l /dev/disk/by-label
+```
+
+4. Trigger disk addition
+```bash
+udevadm trigger --action=add --name-match=<device name>
+```
 
 ## Disable automatic backup
 
