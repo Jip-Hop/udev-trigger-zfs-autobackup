@@ -4,26 +4,14 @@ from email.message import EmailMessage
 from log_util import Logging
 from config_reader import SmtpConfig
 
-# from config_reader import read_validate_config
-
-# Load the configuration from the YAML file
-# config, pools_lookup = read_validate_config('config.yaml')
-
 # Enclose the mail sending logic in a function
 def send_email(subject, body, config: SmtpConfig, logger: Logging):
-    # Set the sender email and password
-    # sender_email = config['smtp']['login']
-    # password = config['smtp']['password']
 
     # Create the plain-text email
     message = EmailMessage()
     message.set_content(body)  # Set email body
     message['Subject'] = subject  # Set email subject
     message['From'] = config.login  # Set email from
-
-    # SMTP server configuration
-    # smtp_server = config['smtp']['server']
-    # smtp_port = config['smtp']['port']
 
     # Send the email to all recipients
     message['To'] = config.recipients#['smtp']['recipients']  # Set current recipient
@@ -40,12 +28,15 @@ def send_email(subject, body, config: SmtpConfig, logger: Logging):
 
 def mail(message: str, config: SmtpConfig, logger: Logging):
     logger.log(message)
-    send_email("ZFS-Autobackup with UDEV Trigger", message, config, logger)
+    if config is not None:
+        send_email("ZFS-Autobackup with UDEV Trigger", message, config, logger)
     
 def mail_error(message: str, config: SmtpConfig, logger: Logging):
     logger.error(message)
-    send_email("ERROR: ZFS-Autobackup with UDEV Trigger", message, config, logger)
+    if config is not None:
+        send_email("ERROR: ZFS-Autobackup with UDEV Trigger", message, config, logger)
 
 def mail_exception(message: str, config: SmtpConfig, logger: Logging):
     logger.exception(message)
-    send_email("ERROR: ZFS-Autobackup with UDEV Trigger", message, config, logger)
+    if config is not None:
+        send_email("ERROR: ZFS-Autobackup with UDEV Trigger", message, config, logger)
